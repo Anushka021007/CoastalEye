@@ -3,3 +3,8 @@ cache-downloads
 inspector
 api
 source/inspector.html
+venv/
+__pycache__/
+*.pyc
+oilspill.db
+.env
