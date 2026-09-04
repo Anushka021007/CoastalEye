@@ -1,0 +1,63 @@
+/* CoastalEye Custom Styles */
+
+.hero-section {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+}
+
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Map container */
+#map {
+    height: 500px;
+    width: 100%;
+    border-radius: 8px;
+}
+
+/* Suspect card highlight for top suspect */
+.suspect-card.top-suspect {
+    background-color: #fff5f5;
+    border-left: 4px solid #dc3545;
+}
+
+.suspect-card.top-suspect .score {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.suspect-rank {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #6c757d;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.suspect-rank.top-suspect {
+    background: #dc3545;
+}
+
+/* Pulse animation for top suspect on map */
+.ship-suspect-marker {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
