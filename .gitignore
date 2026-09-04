@@ -1,5 +1,35 @@
-cache
-cache-downloads
-inspector
-api
-source/inspector.html
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# ML weights (too big)
+ml/weights/*.pt
+ml/weights/*.pth
+
+# Data (too big)
+geo/data/
+*.tif
+*.tiff
+*.SAFE/
+
+# Node
+node_modules/
+.next/
+
+# Logs
+*.log
