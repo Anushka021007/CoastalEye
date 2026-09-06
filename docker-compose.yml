@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:15-3.3
+    container_name: coastal-eye-db
+    environment:
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: coastal_eye
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgis_data:

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoastalEye — We see what the ocean cannot hide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="a-root">
+<div class="a-grid"></div>
+<div class="a-vignette"></div>
+
+<div class="a-top">
+    <div class="a-brand"><span class="a-brand-mark"></span>Coastal<span class="brand-name">Eye</span></div>
+    <div class="a-top-meta">
+        <div class="a-meta-item"><span class="a-status-dot"></span>System online</div>
+        <div class="a-meta-item">Sentinel-1 · SAR</div>
+        <div class="a-meta-item">Mumbai · 03:42 UTC</div>
+    </div>
+</div>
+
+<div class="a-hero">
+    <div class="a-hero-grid">
+        <div>
+            <div class="a-tag"><span class="a-tag-dot"></span>SMART INDIA HACKATHON 2026</div>
+            <h1 class="a-title">
+                <span class="a-title-line">We see</span>
+                <span class="a-title-line">what the ocean</span>
+                <span class="a-title-line"><em>cannot hide.</em></span>
+            </h1>
+            <div class="a-divider"></div>
+            <p class="a-lede">Every year, <strong>4,000 tonnes of oil</strong> silently poison Indian coasts. Fewer than one in ten polluters are ever named. <em>CoastalEye changes that</em> — using satellites, AI, and ship-tracking to identify the vessels responsible.</p>
+            <div class="a-cta-row">
+                <a href="dashboard.html" class="a-cta-primary">Enter command center<span class="a-cta-arrow">→</span></a>
+                <a href="#how-it-works" class="a-cta-ghost">Watch demo →</a>
+            </div>
+        </div>
+        <div class="a-visual">
+            <div class="a-earth-wrap">
+                <div class="a-earth-marker tl">Orbit view · pass 47</div>
+                <div class="a-earth-marker tr">Ocean surface · below</div>
+                <svg viewBox="0 0 460 540" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;overflow:visible">
+                    <defs>
+                        <radialGradient id="earth-atm" cx="45%" cy="45%" r="60%">
+                            <stop offset="60%" stop-color="#0a1a2a" stop-opacity="0"/>
+                            <stop offset="90%" stop-color="#6fb8d5" stop-opacity="0.25"/>
+                            <stop offset="100%" stop-color="#6fb8d5" stop-opacity="0"/>
+                        </radialGradient>
+                        <radialGradient id="earth-body" cx="35%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#2c4c6b"/>
+                            <stop offset="40%" stop-color="#1a3550"/>
+                            <stop offset="80%" stop-color="#0a1a2a"/>
+                            <stop offset="100%" stop-color="#050b14"/>
+                        </radialGradient>
+                        <radialGradient id="earth-light" cx="30%" cy="25%" r="45%">
+                            <stop offset="0%" stop-color="#a8dadc" stop-opacity="0.3"/>
+                            <stop offset="60%" stop-color="#6fb8d5" stop-opacity="0.05"/>
+                            <stop offset="100%" stop-color="#6fb8d5" stop-opacity="0"/>
+                        </radialGradient>
+                        <clipPath id="earth-clip"><circle cx="230" cy="180" r="130"/></clipPath>
+                        <linearGradient id="ocean-fade" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#0a1a2a" stop-opacity="1"/>
+                            <stop offset="30%" stop-color="#0a1a2a" stop-opacity="0.4"/>
+                            <stop offset="100%" stop-color="#050b14" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+
+                    <circle cx="230" cy="180" r="160" fill="url(#earth-atm)"/>
+                    <circle cx="230" cy="180" r="130" fill="url(#earth-body)"/>
+
+                    <g clip-path="url(#earth-clip)" opacity="0.4">
+                        <path d="M 160 130 Q 175 128 185 140 Q 190 155 195 175 Q 200 195 205 215 Q 200 235 190 250 Q 180 265 165 275" fill="rgba(168,218,220,0.2)" stroke="rgba(168,218,220,0.6)" stroke-width="0.7"/>
+                        <path d="M 215 145 Q 240 150 260 165 Q 275 180 275 200 Q 270 215 258 225" fill="rgba(168,218,220,0.15)" stroke="rgba(168,218,220,0.45)" stroke-width="0.6"/>
+                        <path d="M 225 250 Q 245 245 260 255 L 275 270 Q 268 285 250 290" fill="rgba(168,218,220,0.12)" stroke="rgba(168,218,220,0.35)" stroke-width="0.5"/>
+                    </g>
+
+                    <g clip-path="url(#earth-clip)" opacity="0.25">
+                        <line x1="100" y1="140" x2="360" y2="140" stroke="rgba(168,218,220,0.4)" stroke-width="0.3" stroke-dasharray="2,4"/>
+                        <line x1="100" y1="180" x2="360" y2="180" stroke="rgba(168,218,220,0.5)" stroke-width="0.4" stroke-dasharray="2,4"/>
+                        <line x1="100" y1="220" x2="360" y2="220" stroke="rgba(168,218,220,0.4)" stroke-width="0.3" stroke-dasharray="2,4"/>
+                        <path d="M 180 60 Q 175 180 200 300" fill="none" stroke="rgba(168,218,220,0.3)" stroke-width="0.3" stroke-dasharray="2,4"/>
+                        <path d="M 230 55 Q 230 180 230 305" fill="none" stroke="rgba(168,218,220,0.4)" stroke-width="0.4" stroke-dasharray="2,4"/>
+                        <path d="M 280 60 Q 285 180 260 300" fill="none" stroke="rgba(168,218,220,0.3)" stroke-width="0.3" stroke-dasharray="2,4"/>
+                    </g>
+
+                    <circle cx="230" cy="180" r="130" fill="url(#earth-light)" style="mix-blend-mode:screen"/>
+                    <circle cx="230" cy="180" r="130" fill="none" stroke="rgba(111,184,213,0.4)" stroke-width="0.5"/>
+
+                    <g clip-path="url(#earth-clip)">
+                        <circle cx="215" cy="200" r="2" fill="#e88e8e"/>
+                        <circle cx="215" cy="200" r="5" fill="none" stroke="rgba(232,110,110,0.5)" stroke-width="0.5"/>
+                        <circle cx="215" cy="200" r="9" fill="none" stroke="rgba(232,110,110,0.3)" stroke-width="0.4"/>
+                    </g>
+
+                    <line x1="215" y1="200" x2="215" y2="360" stroke="rgba(232,110,110,0.4)" stroke-width="0.5" stroke-dasharray="2,3"/>
+
+                    <g transform="translate(340, 70)">
+                        <rect x="-2" y="-8" width="4" height="16" fill="#8faccc" opacity="0.8"/>
+                        <rect x="-14" y="-1" width="10" height="3" fill="#6fb8d5" opacity="0.6"/>
+                        <rect x="4" y="-1" width="10" height="3" fill="#6fb8d5" opacity="0.6"/>
+                        <circle cx="0" cy="0" r="1.5" fill="#a8dadc"/>
+                    </g>
+                    <text x="350" y="65" fill="rgba(168,218,220,0.7)" font-family="'JetBrains Mono',monospace" font-size="8" letter-spacing="1.5">SENTINEL-1A</text>
+                    <text x="350" y="77" fill="rgba(168,218,220,0.4)" font-family="'JetBrains Mono',monospace" font-size="7" letter-spacing="1">693 KM · SAR</text>
+                    <line x1="340" y1="70" x2="215" y2="200" stroke="rgba(168,218,220,0.25)" stroke-width="0.5" stroke-dasharray="1,4"/>
+
+                    <line x1="60" y1="340" x2="400" y2="340" stroke="rgba(111,184,213,0.3)" stroke-width="0.4"/>
+                    <text x="60" y="332" fill="rgba(168,218,220,0.5)" font-family="'JetBrains Mono',monospace" font-size="8" letter-spacing="1.5">↕ SEA LEVEL · SURFACE VIEW</text>
+
+                    <rect x="0" y="340" width="460" height="200" fill="url(#ocean-fade)"/>
+
+                    <g opacity="0.7">
+                        <path d="M 20 370 Q 60 365 100 372 T 180 370 T 260 372 T 340 368 T 440 372" fill="none" stroke="rgba(168,218,220,0.5)" stroke-width="1"/>
+                        <path d="M 20 385 Q 60 380 100 388 T 180 385 T 260 388 T 340 383 T 440 388" fill="none" stroke="rgba(168,218,220,0.4)" stroke-width="0.8"/>
+                        <path d="M 20 400 Q 60 396 100 403 T 180 400 T 260 403 T 340 397 T 440 402" fill="none" stroke="rgba(168,218,220,0.35)" stroke-width="0.7"/>
+                        <path d="M 20 415 Q 60 411 100 418 T 180 415 T 260 417 T 340 412 T 440 416" fill="none" stroke="rgba(143,172,204,0.3)" stroke-width="0.6"/>
+                        <path d="M 20 430 Q 60 426 100 432 T 180 430 T 260 432 T 340 427 T 440 431" fill="none" stroke="rgba(143,172,204,0.25)" stroke-width="0.5"/>
+                        <path d="M 20 448 Q 60 444 100 450 T 180 448 T 260 450 T 340 445 T 440 449" fill="none" stroke="rgba(143,172,204,0.2)" stroke-width="0.5"/>
+                        <path d="M 20 466 Q 60 463 100 468 T 180 466 T 260 468 T 340 464 T 440 467" fill="none" stroke="rgba(143,172,204,0.15)" stroke-width="0.4"/>
+                    </g>
+
+                    <g transform="translate(215, 388)">
+                        <line x1="0" y1="0" x2="0" y2="-14" stroke="#e88e8e" stroke-width="1"/>
+                        <path d="M -18 0 L 18 0 L 14 6 L -14 6 Z" fill="#e88e8e" stroke="#e88e8e" stroke-width="0.5"/>
+                        <line x1="-6" y1="-14" x2="6" y2="-14" stroke="#e88e8e" stroke-width="0.8"/>
+                        <circle cx="0" cy="18" r="14" fill="none" stroke="rgba(232,110,110,0.4)" stroke-width="0.5"/>
+                        <circle cx="0" cy="18" r="8" fill="rgba(232,110,110,0.15)" stroke="rgba(232,110,110,0.6)" stroke-width="0.6"/>
+                    </g>
+                    <text x="245" y="392" fill="#e88e8e" font-family="'JetBrains Mono',monospace" font-size="9" letter-spacing="1.5">Aurora Star · SUSPECT</text>
+                    <text x="245" y="404" fill="rgba(232,110,110,0.5)" font-family="'JetBrains Mono',monospace" font-size="8" letter-spacing="1">MMSI 371234</text>
+
+                    <g transform="translate(90, 410)">
+                        <line x1="0" y1="0" x2="0" y2="-10" stroke="#a8dadc" stroke-width="0.8"/>
+                        <path d="M -12 0 L 12 0 L 10 4 L -10 4 Z" fill="rgba(168,218,220,0.7)" stroke="#a8dadc" stroke-width="0.4"/>
+                    </g>
+                    <text x="30" y="428" fill="rgba(168,218,220,0.7)" font-family="'JetBrains Mono',monospace" font-size="8" letter-spacing="1.5">△ Trident</text>
+
+                    <g transform="translate(360, 440)">
+                        <line x1="0" y1="0" x2="0" y2="-8" stroke="#a8d8b8" stroke-width="0.7"/>
+                        <path d="M -10 0 L 10 0 L 8 3 L -8 3 Z" fill="rgba(168,216,184,0.6)" stroke="#a8d8b8" stroke-width="0.4"/>
+                    </g>
+                    <text x="330" y="458" fill="rgba(168,216,184,0.7)" font-family="'JetBrains Mono',monospace" font-size="8" letter-spacing="1.5">◆ Pride</text>
+
+                    <line x1="215" y1="200" x2="215" y2="374" stroke="rgba(232,110,110,0.5)" stroke-width="0.5" stroke-dasharray="1,3"/>
+                </svg>
+                <div class="a-earth-caption"><em>From orbit to the surface. One system watches both.</em>Sentinel-1A · 693 km altitude · Ocean surface · Mumbai coast</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="a-metrics">
+    <div class="a-metrics-header">
+        <div class="a-section-tag">The problem</div>
+        <div class="a-section-note">Source · UN Environment · MoEFCC</div>
+    </div>
+    <div class="a-metrics-grid">
+        <div class="a-metric">
+            <div class="a-metric-label">Coastline</div>
+            <div class="a-metric-value">7,500<em>km</em></div>
+            <div class="a-metric-desc">of Indian ocean, unwatched until now</div>
+        </div>
+        <div class="a-metric">
+            <div class="a-metric-label">Pollution / yr</div>
+            <div class="a-metric-value warn">4,000<em>t</em></div>
+            <div class="a-metric-desc">of oil dumped illegally each year</div>
+        </div>
+        <div class="a-metric">
+            <div class="a-metric-label">Attribution rate</div>
+            <div class="a-metric-value critical">&lt;10<em>%</em></div>
+            <div class="a-metric-desc">of polluters were ever identified</div>
+        </div>
+        <div class="a-metric">
+            <div class="a-metric-label">Response time</div>
+            <div class="a-metric-value">&lt;5<em>sec</em></div>
+            <div class="a-metric-desc">from spill detection to suspect ranking</div>
+        </div>
+    </div>
+</div>
+
+<div class="a-flow" id="how-it-works">
+    <div class="a-flow-header">
+        <div class="a-section-tag">How it works</div>
+        <h2 class="a-flow-title">Three stages.<br><em>One name.</em></h2>
+        <p class="a-flow-lede">From orbit to arrest, the pipeline runs autonomously — free satellite data in, court-ready reports out.</p>
+    </div>
+    <div class="a-flow-steps">
+        <div class="a-step">
+            <div class="a-step-index">STAGE 01 · DETECT</div>
+            <h3 class="a-step-title">See<br><em>from orbit.</em></h3>
+            <p class="a-step-desc">A U-Net neural network parses Sentinel-1 radar imagery, identifying oil signatures across coastal waters every six to twelve days.</p>
+            <div class="a-step-tech">◇ U-Net · PyTorch · 0.67 IoU</div>
+        </div>
+        <div class="a-step">
+            <div class="a-step-index">STAGE 02 · CORRELATE</div>
+            <h3 class="a-step-title">Track<br><em>every vessel.</em></h3>
+            <p class="a-step-desc">AIS ship tracking data reveals which vessels were nearby, including dark ship events where transponders were disabled during formation.</p>
+            <div class="a-step-tech">◇ AIS · PostGIS · Dark ship protocol</div>
+        </div>
+        <div class="a-step">
+            <div class="a-step-index">STAGE 03 · ATTRIBUTE</div>
+            <h3 class="a-step-title">Name<br><em>the polluter.</em></h3>
+            <p class="a-step-desc">Four evidence axes weighted into a single score. Ranked suspects with court-ready PDF reports for Coast Guard enforcement.</p>
+            <div class="a-step-tech">◇ Weighted score /100 · Enforcement-ready</div>
+        </div>
+    </div>
+</div>
+
+<div class="a-quote">
+    <div class="a-quote-text">The ocean has always kept its secrets. We built a way to make it speak.</div>
+    <div class="a-quote-source">— TEAM COASTALEYE · MANIFESTO</div>
+</div>
+
+<div class="a-footer">
+    <div class="a-footer-left"><em>CoastalEye</em> · Built for the Indian coast</div>
+    <div class="a-footer-meta">SIH 2026 · Team CoastalEye · v0.9.4</div>
+</div>
+
+</div>
+</body>
+</html>
