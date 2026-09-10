@@ -1,0 +1,638 @@
+import ee
+import geemap
+import os
+
+
+# =====================================================
+# STEP 4 — IMPROVED SENTINEL-1 DARK ANOMALY DETECTION
+# =====================================================
+
+# =====================================================
+# 1. CONNECT TO GOOGLE EARTH ENGINE
+# =====================================================
+
+ee.Initialize(project="coastal-eye-507617")
+
+print("GEE connected successfully!")
+
+
+# =====================================================
+# 2. DEFINE ORIGINAL ROI
+# =====================================================
+
+roi = ee.Geometry.Rectangle([
+    72.7, 18.8,
+    72.9, 19.0
+])
+
+print("Original ROI created.")
+
+
+# =====================================================
+# 3. DEFINE OFFSHORE ANALYSIS REGION
+# =====================================================
+
+ocean_roi = ee.Geometry.Rectangle([
+    72.70, 18.80,
+    72.82, 19.00
+])
+
+print("Offshore analysis region created.")
+
+
+# =====================================================
+# 4. PARAMETERS
+# =====================================================
+
+START_DATE = "2026-01-01"
+END_DATE   = "2026-01-10"
+
+# Sentinel-1 pixel size
+SCALE = 10
+
+# Speckle filtering radius
+SPECKLE_RADIUS = 30
+
+# Background estimation radius
+BACKGROUND_RADIUS = 500
+
+# Dark anomaly threshold
+# More negative = darker than surroundings
+ANOMALY_THRESHOLD = -2.5
+
+# Minimum connected pixels
+MIN_PIXELS = 20
+
+print("Parameters loaded.")
+
+
+# =====================================================
+# 5. GET SENTINEL-1 IMAGES
+# =====================================================
+
+images = (
+    ee.ImageCollection("COPERNICUS/S1_GRD")
+    .filterBounds(ocean_roi)
+    .filterDate(START_DATE, END_DATE)
+
+    # Interferometric Wide swath
+    .filter(
+        ee.Filter.eq(
+            "instrumentMode",
+            "IW"
+        )
+    )
+
+    # VV polarization
+    .filter(
+        ee.Filter.listContains(
+            "transmitterReceiverPolarisation",
+            "VV"
+        )
+    )
+
+    # Prefer VV-only images when available
+    .filter(
+        ee.Filter.eq(
+            "orbitProperties_pass",
+            "DESCENDING"
+        )
+    )
+
+    .sort("system:time_start")
+)
+
+
+# =====================================================
+# 6. CHECK NUMBER OF IMAGES
+# =====================================================
+
+number_of_images = images.size().getInfo()
+
+print("---------------------------------------")
+print("Number of Sentinel-1 images:", number_of_images)
+print("---------------------------------------")
+
+
+if number_of_images == 0:
+
+    raise Exception(
+        "No Sentinel-1 images were found. "
+        "Try expanding the date range or removing "
+        "the descending-orbit filter."
+    )
+
+
+# =====================================================
+# 7. SELECT IMAGE
+# =====================================================
+
+image = ee.Image(
+    images.first()
+)
+
+image_date = (
+    ee.Date(
+        image.get("system:time_start")
+    )
+    .format("YYYY-MM-dd HH:mm")
+    .getInfo()
+)
+
+orbit_pass = image.get(
+    "orbitProperties_pass"
+).getInfo()
+
+print("Selected image date:", image_date)
+print("Orbit:", orbit_pass)
+
+
+# =====================================================
+# 8. SELECT VV BAND
+# =====================================================
+
+vv = image.select("VV")
+
+print("VV band selected.")
+
+
+# =====================================================
+# 9. CREATE WATER MASK
+# =====================================================
+
+water_data = ee.Image(
+    "JRC/GSW1_4/GlobalSurfaceWater"
+)
+
+water_occurrence = (
+    water_data
+    .select("occurrence")
+)
+
+
+# =====================================================
+# 10. USE MORE PERMANENT WATER
+# =====================================================
+
+# Pixels with >90% historical water occurrence
+water = water_occurrence.gt(90)
+
+print("Permanent-water mask created.")
+
+
+# =====================================================
+# 11. RESTRICT WATER TO OFFSHORE ROI
+# =====================================================
+
+water = (
+    water
+    .clip(ocean_roi)
+)
+
+
+# =====================================================
+# 12. ERODE WATER MASK
+# =====================================================
+
+# This removes a small zone close to the coastline.
+# It helps reduce land/sea boundary artifacts.
+
+water_eroded = (
+    water
+    .focal_min(
+        radius=30,
+        units="meters"
+    )
+)
+
+
+print("Coastal boundary removed from water mask.")
+
+
+# =====================================================
+# 13. MASK SENTINEL-1 VV
+# =====================================================
+
+sea_vv = (
+    vv
+    .updateMask(water_eroded)
+    .clip(ocean_roi)
+)
+
+print("Water-only VV image created.")
+
+
+# =====================================================
+# 14. SPECKLE REDUCTION
+# =====================================================
+
+# Sentinel-1 GRD is expressed in dB.
+#
+# A focal median is used here because it is relatively
+# robust to isolated bright/dark speckle and preserves
+# larger boundaries better than a simple mean.
+
+vv_filtered = (
+    sea_vv
+    .focal_median(
+        radius=SPECKLE_RADIUS,
+        units="meters"
+    )
+)
+
+print("Speckle filtering completed.")
+
+
+# =====================================================
+# 15. CALCULATE LOCAL BACKGROUND
+# =====================================================
+
+# Estimate the surrounding sea-surface backscatter
+# using a much larger neighborhood.
+
+local_background = (
+    vv_filtered
+    .focal_median(
+        radius=BACKGROUND_RADIUS,
+        units="meters"
+    )
+)
+
+print("Local background calculated.")
+
+
+# =====================================================
+# 16. CALCULATE LOCAL CONTRAST
+# =====================================================
+
+difference = (
+    vv_filtered
+    .subtract(local_background)
+)
+
+print("Local contrast calculated.")
+
+
+# =====================================================
+# 17. DETECT DARK ANOMALIES
+# =====================================================
+
+# Candidate pixels must be at least 2.5 dB darker
+# than their surrounding background.
+
+dark_anomaly = (
+    difference
+    .lt(ANOMALY_THRESHOLD)
+)
+
+print(
+    "Dark anomalies detected using threshold:",
+    ANOMALY_THRESHOLD,
+    "dB"
+)
+
+
+# =====================================================
+# 18. REMOVE VERY SMALL REGIONS
+# =====================================================
+
+pixel_count = (
+    dark_anomaly
+    .connectedPixelCount(
+        maxSize=256,
+        eightConnected=True
+    )
+)
+
+
+candidate = (
+    dark_anomaly
+    .updateMask(
+        pixel_count.gte(MIN_PIXELS)
+    )
+)
+
+print(
+    "Regions smaller than",
+    MIN_PIXELS,
+    "pixels removed."
+)
+
+
+# =====================================================
+# 19. MORPHOLOGICAL CLEANING
+# =====================================================
+
+# Fill very small holes / gaps and make the candidate
+# regions spatially more coherent.
+
+candidate_clean = (
+    candidate
+    .focal_max(
+        radius=20,
+        units="meters"
+    )
+    .focal_min(
+        radius=20,
+        units="meters"
+    )
+)
+
+
+# Reapply water mask after morphological operations
+candidate_clean = (
+    candidate_clean
+    .updateMask(water_eroded)
+)
+
+
+print("Morphological cleanup completed.")
+
+
+# =====================================================
+# 20. FINAL CONNECTED COMPONENT FILTER
+# =====================================================
+
+final_pixel_count = (
+    candidate_clean
+    .connectedPixelCount(
+        maxSize=256,
+        eightConnected=True
+    )
+)
+
+
+candidate_spill = (
+    candidate_clean
+    .updateMask(
+        final_pixel_count.gte(MIN_PIXELS)
+    )
+)
+
+
+print("Final candidate layer created.")
+
+
+# =====================================================
+# 21. CREATE MAP
+# =====================================================
+
+Map = geemap.Map()
+
+Map.centerObject(
+    ocean_roi,
+    11
+)
+
+print("Map created.")
+
+
+# =====================================================
+# 22. ADD RAW SENTINEL-1 VV
+# =====================================================
+
+Map.addLayer(
+    vv.clip(ocean_roi),
+    {
+        "min": -25,
+        "max": 5
+    },
+    "01 - Raw Sentinel-1 VV"
+)
+
+
+# =====================================================
+# 23. ADD WATER MASK
+# =====================================================
+
+Map.addLayer(
+    water_eroded.selfMask(),
+    {
+        "palette": [
+            "0000FF"
+        ]
+    },
+    "02 - Offshore Water"
+)
+
+
+# =====================================================
+# 24. ADD FILTERED VV
+# =====================================================
+
+Map.addLayer(
+    vv_filtered,
+    {
+        "min": -25,
+        "max": 5
+    },
+    "03 - Speckle Reduced VV"
+)
+
+
+# =====================================================
+# 25. ADD LOCAL BACKGROUND
+# =====================================================
+
+Map.addLayer(
+    local_background,
+    {
+        "min": -25,
+        "max": 5
+    },
+    "04 - Local Background"
+)
+
+
+# =====================================================
+# 26. ADD DARKNESS DIFFERENCE
+# =====================================================
+
+Map.addLayer(
+    difference,
+    {
+        "min": -5,
+        "max": 5,
+        "palette": [
+            "0000FF",
+            "FFFFFF",
+            "FFFF00",
+            "FF0000"
+        ]
+    },
+    "05 - Local Contrast"
+)
+
+
+# =====================================================
+# 27. ADD RAW DARK ANOMALIES
+# =====================================================
+
+Map.addLayer(
+    dark_anomaly.selfMask(),
+    {
+        "palette": [
+            "FFA500"
+        ]
+    },
+    "06 - Raw Dark Anomalies"
+)
+
+
+# =====================================================
+# 28. ADD FINAL CANDIDATE SPILL
+# =====================================================
+
+Map.addLayer(
+    candidate_spill.selfMask(),
+    {
+        "palette": [
+            "FF0000"
+        ]
+    },
+    "07 - Possible Oil Spill"
+)
+
+
+# =====================================================
+# 29. ADD OFFSHORE ROI
+# =====================================================
+
+Map.addLayer(
+    ocean_roi,
+    {
+        "color": "FFFFFF"
+    },
+    "08 - Offshore Analysis Region"
+)
+
+
+# =====================================================
+# 30. VV STATISTICS
+# =====================================================
+
+stats = sea_vv.reduceRegion(
+    reducer=ee.Reducer.minMax()
+        .combine(
+            reducer2=ee.Reducer.mean(),
+            sharedInputs=True
+        ),
+    geometry=ocean_roi,
+    scale=SCALE,
+    maxPixels=1e9
+)
+
+
+print("---------------------------------------")
+print("Sea VV statistics:")
+print(stats.getInfo())
+print("---------------------------------------")
+
+
+# =====================================================
+# 31. FILTERED VV STATISTICS
+# =====================================================
+
+filtered_stats = vv_filtered.reduceRegion(
+    reducer=ee.Reducer.minMax()
+        .combine(
+            reducer2=ee.Reducer.mean(),
+            sharedInputs=True
+        ),
+    geometry=ocean_roi,
+    scale=SCALE,
+    maxPixels=1e9
+)
+
+
+print("Filtered VV statistics:")
+print(filtered_stats.getInfo())
+
+
+# =====================================================
+# 32. COUNT CANDIDATE PIXELS
+# =====================================================
+
+candidate_area = (
+    candidate_spill
+    .multiply(
+        ee.Image.pixelArea()
+    )
+    .reduceRegion(
+        reducer=ee.Reducer.sum(),
+        geometry=ocean_roi,
+        scale=SCALE,
+        maxPixels=1e9
+    )
+)
+
+
+print("---------------------------------------")
+print("Candidate dark-anomaly area:")
+print(candidate_area.getInfo())
+print("---------------------------------------")
+
+
+# =====================================================
+# 33. EXPORT CANDIDATE LAYER
+# =====================================================
+
+export_image = (
+    candidate_spill
+    .selfMask()
+    .toByte()
+)
+
+
+task = ee.batch.Export.image.toDrive(
+    image=export_image,
+    description="Step4_Possible_Oil_Spill",
+    folder="GEE_Oil_Spill",
+    fileNamePrefix="possible_oil_spill_step4",
+    region=ocean_roi,
+    scale=SCALE,
+    maxPixels=1e9
+)
+
+
+task.start()
+
+print("GeoTIFF export task started.")
+
+
+# =====================================================
+# 34. SAVE INTERACTIVE MAP
+# =====================================================
+
+file_path = os.path.abspath(
+    "oil_spill_step4.html"
+)
+
+print("---------------------------------------")
+print("HTML file will be created at:")
+print(file_path)
+print("---------------------------------------")
+
+
+Map.to_html(
+    file_path
+)
+
+
+# =====================================================
+# 35. FINISHED
+# =====================================================
+
+print("---------------------------------------")
+print("STEP 4 COMPLETED SUCCESSFULLY")
+print("---------------------------------------")
+print("Selected image:", image_date)
+print("Orbit:", orbit_pass)
+print("Speckle radius:", SPECKLE_RADIUS, "m")
+print("Background radius:", BACKGROUND_RADIUS, "m")
+print("Anomaly threshold:", ANOMALY_THRESHOLD, "dB")
+print("Minimum region:", MIN_PIXELS, "pixels")
+print("---------------------------------------")
+print("Open:")
+print(file_path)
+print("---------------------------------------")
