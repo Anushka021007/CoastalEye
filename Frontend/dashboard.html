@@ -1,50 +1,428 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoastalEye Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <title>CoastalEye — Command Center</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
     <link href="css/style.css" rel="stylesheet">
 </head>
+
 <body>
-    <!-- Top Bar -->
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="index.html">
-                <i class="bi bi-water text-info"></i> CoastalEye
-            </a>
-            <span class="text-white-50">Detected Spills Dashboard</span>
+
+<div class="console">
+
+    <!-- TOP BAR -->
+
+    <header class="console-top">
+
+        <a href="index.html" class="console-brand">
+
+            <span class="console-mark"></span>
+
+            <span>
+                COASTAL<span>EYE</span>
+            </span>
+
+        </a>
+
+        <div class="console-title">
+            MARITIME ENVIRONMENTAL INTELLIGENCE
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="container py-4">
-        <h1 class="mb-3">Detected Spills</h1>
-        <p class="text-muted mb-4">
-            Marine oil spill detections from Sentinel-1 SAR imagery, with automated vessel attribution.
-        </p>
+        <div class="console-status">
 
-        <!-- Loading state -->
-        <div id="loading" class="text-center py-5">
-            <div class="spinner-border text-info" role="status">
-                <span class="visually-hidden">Loading...</span>
+            <span class="live-dot"></span>
+
+            <span id="system-status">
+                SYSTEM ONLINE
+            </span>
+
+        </div>
+
+    </header>
+
+
+    <!-- MAIN GRID -->
+
+    <main class="console-main">
+
+        <!-- LEFT SIDE -->
+
+        <section class="map-section">
+
+            <div class="map-header">
+
+                <div>
+
+                    <div class="eyebrow">
+                        LIVE SURVEILLANCE
+                    </div>
+
+                    <h1>
+                        Indian Coastal Watch
+                    </h1>
+
+                </div>
+
+                <div class="acquisition">
+
+                    <span class="acquisition-label">
+                        LAST ACQUISITION
+                    </span>
+
+                    <strong id="acquisition-time">
+                        —
+                    </strong>
+
+                </div>
+
             </div>
-            <p class="mt-2 text-muted">Loading detections...</p>
+
+
+            <!-- MAP -->
+
+            <div class="map-frame">
+
+                <div id="map"></div>
+
+
+                <!-- MAP HUD -->
+
+                <div class="map-hud top-left">
+
+                    <div>
+                        SENSOR
+                        <strong>SENTINEL-1</strong>
+                    </div>
+
+                    <div>
+                        MODE
+                        <strong>SAR / IW</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="map-hud top-right">
+
+                    <div class="hud-live">
+                        ● LIVE FEED
+                    </div>
+
+                    <div>
+                        REGION
+                        <strong>MUMBAI COAST</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="coordinates">
+
+                    LAT
+                    <strong id="latitude">19.0200</strong>
+
+                    &nbsp;&nbsp;
+
+                    LON
+                    <strong id="longitude">72.8500</strong>
+
+                </div>
+
+
+                <div class="map-scale">
+                    0 — 10 — 20 — 30 KM
+                </div>
+
+            </div>
+
+
+            <!-- MAP FOOTER -->
+
+            <div class="map-footer">
+
+                <div>
+                    <span class="legend spill"></span>
+                    OIL SIGNATURE
+                </div>
+
+                <div>
+                    <span class="legend vessel"></span>
+                    VESSEL
+                </div>
+
+                <div>
+                    <span class="legend track"></span>
+                    AIS TRACK
+                </div>
+
+                <div class="refresh-info">
+
+                    AUTO REFRESH
+                    <strong id="refresh-countdown">
+                        30s
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- RIGHT PANEL -->
+
+        <aside class="intel-panel">
+
+
+            <!-- DETECTION -->
+
+            <div class="intel-block detection-block">
+
+                <div class="block-header">
+
+                    <span>
+                        01 / DETECTION
+                    </span>
+
+                    <span id="detection-state">
+                        MONITORING
+                    </span>
+
+                </div>
+
+
+                <div class="detection-indicator">
+
+                    <div class="pulse-ring"></div>
+
+                    <div>
+
+                        <div class="detection-label">
+                            OIL SIGNATURE
+                        </div>
+
+                        <div class="detection-value"
+                             id="detection-value">
+
+                            SCANNING
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="confidence">
+
+                    <div class="confidence-head">
+
+                        <span>
+                            MODEL CONFIDENCE
+                        </span>
+
+                        <strong id="confidence">
+                            —
+                        </strong>
+
+                    </div>
+
+                    <div class="confidence-bar">
+
+                        <div id="confidence-fill"></div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- TELEMETRY -->
+
+            <div class="intel-block">
+
+                <div class="block-header">
+                    02 / TELEMETRY
+                </div>
+
+
+                <div class="telemetry-grid">
+
+                    <div class="telemetry-item">
+
+                        <span>
+                            AFFECTED AREA
+                        </span>
+
+                        <strong id="spill-area">
+                            —
+                        </strong>
+
+                    </div>
+
+
+                    <div class="telemetry-item">
+
+                        <span>
+                            ACQUISITION
+                        </span>
+
+                        <strong id="sensor">
+                            SENTINEL-1
+                        </strong>
+
+                    </div>
+
+
+                    <div class="telemetry-item">
+
+                        <span>
+                            POLARISATION
+                        </span>
+
+                        <strong>
+                            VV / VH
+                        </strong>
+
+                    </div>
+
+
+                    <div class="telemetry-item">
+
+                        <span>
+                            RESOLUTION
+                        </span>
+
+                        <strong>
+                            30 M
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- VESSELS -->
+
+            <div class="intel-block">
+
+                <div class="block-header">
+
+                    <span>
+                        03 / VESSEL ACTIVITY
+                    </span>
+
+                    <span id="vessel-count">
+                        0 TRACKS
+                    </span>
+
+                </div>
+
+
+                <div id="vessel-list"
+                     class="vessel-list">
+
+                    <div class="empty-state">
+                        Awaiting AIS correlation...
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SYSTEM -->
+
+            <div class="intel-block system-block">
+
+                <div class="block-header">
+                    04 / SYSTEM
+                </div>
+
+                <div class="system-row">
+
+                    <span>
+                        GOOGLE EARTH ENGINE
+                    </span>
+
+                    <strong class="online">
+                        CONNECTED
+                    </strong>
+
+                </div>
+
+                <div class="system-row">
+
+                    <span>
+                        U-NET INFERENCE
+                    </span>
+
+                    <strong class="online">
+                        READY
+                    </strong>
+
+                </div>
+
+                <div class="system-row">
+
+                    <span>
+                        AIS CORRELATION
+                    </span>
+
+                    <strong class="online">
+                        ACTIVE
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+    </main>
+
+
+    <!-- BOTTOM BAR -->
+
+    <footer class="console-footer">
+
+        <div>
+            COASTALEYE / MARITIME INTELLIGENCE PLATFORM
         </div>
 
-        <!-- Error state -->
-        <div id="error" class="alert alert-danger d-none" role="alert">
-            <i class="bi bi-exclamation-triangle"></i>
-            <span id="error-message">Failed to load data</span>
+        <div>
+            SENTINEL-1 · GEE · U-NET · AIS
         </div>
 
-        <!-- Detections grid -->
-        <div id="detections-grid" class="row g-4 d-none"></div>
-    </div>
+        <div>
+            SIH 2026
+        </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/dashboard.js"></script>
+    </footer>
+
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="js/api.js"></script>
+<script src="js/dashboard.js"></script>
+
 </body>
 </html>

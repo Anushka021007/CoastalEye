@@ -1,81 +1,473 @@
-// Dashboard logic - loads and displays list of detections
+let map = null;
+let spillLayer = null;
+let refreshTimer = null;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const loading = document.getElementById('loading');
-    const error = document.getElementById('error');
-    const grid = document.getElementById('detections-grid');
+let secondsRemaining = 30;
 
-    try {
-        const detections = await getDetections();
-        loading.classList.add('d-none');
-        grid.classList.remove('d-none');
-        renderDetections(detections);
-    } catch (err) {
-        loading.classList.add('d-none');
-        error.classList.remove('d-none');
-        document.getElementById('error-message').textContent = err.message;
-        
-        // MOCK DATA for development while backend isn't ready
-        console.warn('Using mock data since API failed');
-        renderDetections(getMockDetections());
-        grid.classList.remove('d-none');
-        error.classList.add('d-none');
-    }
+
+/* ================================
+   INITIALIZE
+================================ */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    initializeMap();
+
+    loadLiveData();
+
+    startAutoRefresh();
+
 });
 
-function renderDetections(detections) {
-    const grid = document.getElementById('detections-grid');
-    grid.innerHTML = detections.map(d => `
-        <div class="col-md-6 col-lg-4">
-            <a href="detection.html?id=${d.id}" class="text-decoration-none text-dark">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <small class="text-muted">
-                                    <i class="bi bi-geo-alt"></i> ${d.location_name || 'Unknown'}
-                                </small>
-                                <h5 class="card-title mb-0">Detection #${d.id}</h5>
-                            </div>
-                            ${d.confidence > 0.8 ? '<span class="badge bg-danger">High Confidence</span>' : ''}
-                        </div>
-                        <p class="text-muted small mb-3">
-                            <i class="bi bi-clock"></i> ${formatDate(d.detected_at)}
-                        </p>
-                        <div class="row text-center border-top pt-3">
-                            <div class="col-4">
-                                <small class="text-muted d-block">Area</small>
-                                <strong>${d.area_km2?.toFixed(1) || '?'} km²</strong>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted d-block">Confidence</small>
-                                <strong>${d.confidence ? (d.confidence * 100).toFixed(0) + '%' : '?'}</strong>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted d-block">Suspects</small>
-                                <strong><i class="bi bi-ship"></i> ${d.suspect_count || 0}</strong>
-                            </div>
-                        </div>
-                    </div>
+
+/* ================================
+   MAP
+================================ */
+
+function initializeMap() {
+
+    map = L.map("map", {
+        zoomControl: false,
+        attributionControl: true
+    }).setView([19.02, 72.85], 10);
+
+
+    L.control.zoom({
+        position: "bottomright"
+    }).addTo(map);
+
+
+    L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap © CARTO"
+        }
+    ).addTo(map);
+
+
+    // Initial monitoring area
+
+    L.rectangle(
+        [
+            [18.95, 72.80],
+            [19.10, 72.95]
+        ],
+        {
+            color: "#6fb8d5",
+            weight: 1,
+            opacity: 0.25,
+            fill: false,
+            dashArray: "4 6"
+        }
+    ).addTo(map);
+
+
+    // Mumbai monitoring point
+
+    L.circleMarker(
+        [19.02, 72.85],
+        {
+            radius: 5,
+            color: "#a8dadc",
+            fillColor: "#a8dadc",
+            fillOpacity: 1,
+            weight: 1
+        }
+    )
+    .bindTooltip("MONITORING REGION", {
+        permanent: false
+    })
+    .addTo(map);
+
+}
+
+
+/* ================================
+   LIVE DATA
+================================ */
+
+async function loadLiveData() {
+
+    setSystemStatus("ACQUIRING");
+
+
+    try {
+
+        const data = await getLiveMonitor();
+
+        console.log("LIVE MONITOR:", data);
+
+
+        updateDashboard(data);
+
+
+        setSystemStatus("SYSTEM ONLINE");
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        setSystemStatus("GEE CONNECTION ERROR");
+
+
+        /*
+         * Temporary development fallback.
+         *
+         * Remove this once /live-monitor
+         * is completely working.
+         */
+
+        updateDashboard({
+
+            status: "LIVE",
+
+            confidence: 0.89,
+
+            spill_area_percent: 3.7,
+
+            latitude: 19.02,
+
+            longitude: 72.85,
+
+            detected: true,
+
+            acquisition_time: new Date().toISOString(),
+
+            vessels: []
+
+        });
+
+    }
+
+}
+
+
+/* ================================
+   UPDATE DASHBOARD
+================================ */
+
+function updateDashboard(data) {
+
+
+    /* STATUS */
+
+    const detected =
+        data.detected ??
+        (data.confidence > 0.5);
+
+
+    const detectionValue =
+        document.getElementById("detection-value");
+
+
+    const detectionState =
+        document.getElementById("detection-state");
+
+
+    if (detected) {
+
+        detectionValue.textContent =
+            "SIGNATURE DETECTED";
+
+        detectionValue.classList.add("alert");
+
+        detectionState.textContent =
+            "ATTENTION";
+
+    } else {
+
+        detectionValue.textContent =
+            "NO SIGNATURE";
+
+        detectionValue.classList.remove("alert");
+
+        detectionState.textContent =
+            "CLEAR";
+
+    }
+
+
+    /* CONFIDENCE */
+
+    const confidence =
+        Number(data.confidence || 0);
+
+
+    const confidencePercent =
+        Math.round(
+            confidence <= 1
+                ? confidence * 100
+                : confidence
+        );
+
+
+    document.getElementById(
+        "confidence"
+    ).textContent =
+        `${confidencePercent}%`;
+
+
+    document.getElementById(
+        "confidence-fill"
+    ).style.width =
+        `${confidencePercent}%`;
+
+
+    /* AREA */
+
+    const area =
+        Number(
+            data.spill_area_percent || 0
+        );
+
+
+    document.getElementById(
+        "spill-area"
+    ).textContent =
+        `${area.toFixed(2)}%`;
+
+
+    /* COORDINATES */
+
+    if (data.latitude) {
+
+        document.getElementById(
+            "latitude"
+        ).textContent =
+            Number(data.latitude)
+                .toFixed(4);
+
+    }
+
+
+    if (data.longitude) {
+
+        document.getElementById(
+            "longitude"
+        ).textContent =
+            Number(data.longitude)
+                .toFixed(4);
+
+    }
+
+
+    /* ACQUISITION */
+
+    const acquisition =
+        data.acquisition_time ||
+        data.detected_at ||
+        new Date().toISOString();
+
+
+    document.getElementById(
+        "acquisition-time"
+    ).textContent =
+        formatTime(acquisition);
+
+
+    /* SPILL */
+
+    if (
+        data.geometry &&
+        data.geometry.coordinates
+    ) {
+
+        drawSpill(data.geometry);
+
+    }
+
+
+    /* VESSELS */
+
+    renderVessels(
+        data.vessels || []
+    );
+
+}
+
+
+/* ================================
+   SPILL OVERLAY
+================================ */
+
+function drawSpill(geometry) {
+
+    if (spillLayer) {
+
+        map.removeLayer(spillLayer);
+
+    }
+
+
+    const coords =
+        geometry.coordinates[0]
+            .map(point => [
+                point[1],
+                point[0]
+            ]);
+
+
+    spillLayer =
+        L.polygon(
+            coords,
+            {
+                color: "#e88e8e",
+                weight: 2,
+                opacity: 0.9,
+                fillColor: "#e88e8e",
+                fillOpacity: 0.22
+            }
+        ).addTo(map);
+
+
+    map.fitBounds(
+        spillLayer.getBounds(),
+        {
+            padding: [60, 60]
+        }
+    );
+
+}
+
+
+/* ================================
+   VESSELS
+================================ */
+
+function renderVessels(vessels) {
+
+    const container =
+        document.getElementById(
+            "vessel-list"
+        );
+
+
+    document.getElementById(
+        "vessel-count"
+    ).textContent =
+        `${vessels.length} TRACKS`;
+
+
+    if (!vessels.length) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                No correlated vessels in current scene.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML =
+        vessels.map(
+            (vessel, index) => `
+
+            <div class="vessel-row">
+
+                <div class="vessel-rank">
+                    ${String(index + 1).padStart(2, "0")}
                 </div>
-            </a>
-        </div>
-    `).join('');
+
+                <div class="vessel-main">
+
+                    <strong>
+                        ${vessel.ship_name ||
+                        "UNKNOWN VESSEL"}
+                    </strong>
+
+                    <span>
+                        MMSI ${vessel.mmsi || "—"}
+                    </span>
+
+                </div>
+
+                <div class="vessel-score">
+
+                    ${vessel.score || "—"}
+
+                </div>
+
+            </div>
+
+        `
+        ).join("");
+
 }
 
-function formatDate(isoString) {
-    const date = new Date(isoString);
-    return date.toLocaleString('en-IN', { 
-        day: 'numeric', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    });
+
+/* ================================
+   AUTO REFRESH
+================================ */
+
+function startAutoRefresh() {
+
+    refreshTimer =
+        setInterval(() => {
+
+            secondsRemaining--;
+
+            document.getElementById(
+                "refresh-countdown"
+            ).textContent =
+                `${secondsRemaining}s`;
+
+
+            if (secondsRemaining <= 0) {
+
+                secondsRemaining = 30;
+
+                loadLiveData();
+
+            }
+
+        }, 1000);
+
 }
 
-// Mock data for development (before backend is ready)
-function getMockDetections() {
-    return [
-        { id: 1, location_name: 'Mumbai coast', detected_at: '2024-01-12T03:42:00Z', area_km2: 4.7, confidence: 0.89, suspect_count: 3 },
-        { id: 2, location_name: 'Ennore port', detected_at: '2023-08-24T14:20:00Z', area_km2: 2.1, confidence: 0.76, suspect_count: 2 },
-        { id: 3, location_name: 'Gulf of Kutch', detected_at: '2024-03-08T09:15:00Z', area_km2: 11.3, confidence: 0.94, suspect_count: 3 }
-    ];
+
+/* ================================
+   STATUS
+================================ */
+
+function setSystemStatus(status) {
+
+    document.getElementById(
+        "system-status"
+    ).textContent =
+        status;
+
+}
+
+
+/* ================================
+   TIME
+================================ */
+
+function formatTime(value) {
+
+    try {
+
+        return new Date(value)
+            .toLocaleString(
+                "en-IN",
+                {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "UTC"
+                }
+            );
+
+    } catch {
+
+        return "—";
+
+    }
+
 }
