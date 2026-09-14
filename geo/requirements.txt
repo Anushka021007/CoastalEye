@@ -9,3 +9,10 @@ requests==2.31.0
 python-dotenv==1.0.0
 earthengine-api==0.1.379
 rasterio==1.3.9
+fastapi
+uvicorn
+opencv-python-headless
+tifffile
+Pillow
+torch
+torchvision
