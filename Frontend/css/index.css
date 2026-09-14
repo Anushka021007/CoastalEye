@@ -1,0 +1,112 @@
+/* ===== COASTALEYE LANDING PAGE ===== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#020611;
+    color:white;
+    font-family:"Inter",sans-serif;
+    overflow:hidden;
+}
+
+.hero{
+    height:100vh;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:70px;
+    background:
+      radial-gradient(circle at center,#0c2d59 0%,#04101d 55%,#020611 100%);
+}
+
+.hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:url("https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1800&q=80") center/cover;
+    opacity:.18;
+    mix-blend-mode:screen;
+}
+
+.hero-content{
+    position:relative;
+    z-index:2;
+    max-width:560px;
+}
+
+.logo{
+    color:#71e6ff;
+    letter-spacing:3px;
+    font-size:13px;
+    margin-bottom:18px;
+    font-weight:700;
+}
+
+.status{
+    color:#77ffa9;
+    font-size:13px;
+    margin-bottom:24px;
+}
+
+.hero h1{
+    font-family:"Instrument Serif",serif;
+    font-size:64px;
+    line-height:1;
+    margin-bottom:20px;
+}
+
+.hero h1 em{
+    color:#7ae7ff;
+    font-style:italic;
+}
+
+.hero p{
+    color:#c8d4df;
+    font-size:18px;
+    line-height:1.8;
+    margin-bottom:34px;
+}
+
+.hero-buttons{
+    display:flex;
+    gap:16px;
+}
+
+.btn{
+    padding:14px 24px;
+    border-radius:999px;
+    text-decoration:none;
+    font-weight:600;
+}
+
+.btn-primary{
+    background:#6fe6ff;
+    color:#02111d;
+}
+
+.btn-secondary{
+    border:1px solid rgba(111,230,255,.4);
+    color:#7de5ff;
+}
+
+.planet{
+    position:relative;
+    z-index:2;
+}
+
+.planet img{
+    width:500px;
+    animation:float 8s ease-in-out infinite;
+    filter:drop-shadow(0 0 40px rgba(111,230,255,.4));
+    mix-blend-mode: screen;
+}
+
+@keyframes float{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-20px)}
+}

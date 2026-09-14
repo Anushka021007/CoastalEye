@@ -1,25 +1,40 @@
-from fastapi import FastAPI, Depends, UploadFile, File
-from fastapi.responses import JSONResponse
+from gee_fetch import fetch_latest_sentinel
+from fastapi import FastAPI, Depends 
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
 import models
 import schemas
+import threading
+import time
+from fastapi.staticfiles import StaticFiles
+from ais_fetch import get_nearby_vessels
 
 import os
 import uuid
 
 # Import our ML prediction function
 from ml_predict import predict_oil_spill
-
+from fastapi.middleware.cors import CORSMiddleware
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
 # Create FastAPI app ONLY ONCE
 app = FastAPI(title="CoastalEye Oil Spill Detection API")
-
+latest_result = {
+    "status": "Starting monitoring..."
+}
+app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
 # Create folders for uploaded files and predictions
-os.makedirs("uploads", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5500", "http://localhost:5500"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
@@ -52,43 +67,78 @@ def create_detection(detection: schemas.DetectionCreate, db: Session = Depends(g
 def get_detections(db: Session = Depends(get_db)):
     return db.query(models.Detection).all()
 
-@app.post("/predict")
-async def predict(
-    file: UploadFile = File(...),
-    latitude: float = 0.0,
-    longitude: float = 0.0,
-    db: Session = Depends(get_db)
-):
-    filename = f"{uuid.uuid4()}.tif"
-    upload_path = os.path.join("uploads", filename)
+@app.get("/live-monitor")
+def live_monitor():
+    return latest_result
+#background live monitoring
+# ==========================
+# BACKGROUND LIVE MONITORING
+# ==========================
 
-    with open(upload_path, "wb") as buffer:
-        buffer.write(await file.read())
+import threading
+import time
 
-    mask_img, overlay_img, confidence, spill_area = predict_oil_spill(upload_path)
+latest_result = {
+    "status": "Starting monitoring..."
+}
 
-    mask_path = os.path.join("outputs", filename.replace(".tif", "_mask.png"))
-    overlay_path = os.path.join("outputs", filename.replace(".tif", "_overlay.png"))
+def monitor_loop():
+    global latest_result
 
-    mask_img.save(mask_path)
-    overlay_img.save(overlay_path)
+    while True:
+        try:
+            image_path = fetch_latest_sentinel()
 
-    detection = models.Detection(
-        latitude=latitude,
-        longitude=longitude,
-        confidence=confidence
-    )
+            mask_img, overlay_img, confidence, spill_area, spill_polygon = predict_oil_spill(image_path)
 
-    db.add(detection)
-    db.commit()
-    db.refresh(detection)
+            mask_img.save("outputs/latest_mask.png")
+            overlay_img.save("outputs/latest_overlay.png")
 
-    return {
-        "status": "success",
-        "detection_id": detection.id,
-        "confidence": round(confidence, 2),
-        "spill_area_percent": spill_area,
-        "mask_path": mask_path,
-        "overlay_path": overlay_path
-    }
+            # Get nearby vessels
+            vessels = get_nearby_vessels(
+                spill_lat=19.030,
+                spill_lon=72.780
+            )
+            # Calculate risk score
+            for vessel in vessels:
+                score = 100
 
+                distance = vessel["distance_km"]
+                score -= distance * 8
+
+                if vessel["speed"] > 10:
+                    score += 10
+
+                vessel["risk_score"] = max(10, min(100, int(score)))
+            # Final API response
+            latest_result = {
+                "status": "Monitoring Mumbai Coast",
+                "oil_spill_detected": confidence >= 60,
+                "confidence": round(confidence, 2),
+                "spill_area_percent": round(spill_area, 2),
+
+                "location": {
+                    "latitude": 19.0760,
+                    "longitude": 72.8777
+                },
+
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": spill_polygon
+                },
+
+                "vessels": vessels,
+
+                "acquisition_time": time.strftime("%Y-%m-%d %H:%M:%S")
+           }
+
+            print("✅ Coastline checked")
+        except Exception as e:
+            print("Monitoring Error:", e)
+
+        time.sleep(300)
+
+
+@app.on_event("startup")
+def start_monitor():
+    threading.Thread(target=monitor_loop, daemon=True).start()

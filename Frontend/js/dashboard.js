@@ -1,9 +1,10 @@
 let map = null;
 let spillLayer = null;
 let refreshTimer = null;
+let overlayTimer = null;
 
 let secondsRemaining = 30;
-
+let vesselMarkers = [];
 
 /* ================================
    INITIALIZE
@@ -38,10 +39,10 @@ function initializeMap() {
 
 
     L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
             maxZoom: 19,
-            attribution: "© OpenStreetMap © CARTO"
+            attribution: "© OpenStreetMap contributors © CARTO"
         }
     ).addTo(map);
 
@@ -154,8 +155,8 @@ function updateDashboard(data) {
     /* STATUS */
 
     const detected =
-        data.detected ??
-        (data.confidence > 0.5);
+        data.oil_spill_detected ??
+        (data.confidence > 0.6);
 
 
     const detectionValue =
@@ -168,24 +169,19 @@ function updateDashboard(data) {
 
     if (detected) {
 
-        detectionValue.textContent =
-            "SIGNATURE DETECTED";
-
+        detectionValue.textContent = "OIL SPILL DETECTED";
         detectionValue.classList.add("alert");
 
-        detectionState.textContent =
-            "ATTENTION";
+        detectionState.textContent = "HIGH RISK";
+        detectionState.style.color = "#ff4d4d";
 
     } else {
 
-        detectionValue.textContent =
-            "NO SIGNATURE";
-
+        detectionValue.textContent = "NO OIL SPILL";
         detectionValue.classList.remove("alert");
 
-        detectionState.textContent =
-            "CLEAR";
-
+        detectionState.textContent = "SAFE";
+        detectionState.style.color = "#6fb8d5";
     }
 
 
@@ -231,27 +227,19 @@ function updateDashboard(data) {
 
     /* COORDINATES */
 
-    if (data.latitude) {
+    const lat = data.location?.latitude;
+    const lon = data.location?.longitude;
 
-        document.getElementById(
-            "latitude"
-        ).textContent =
-            Number(data.latitude)
-                .toFixed(4);
-
+    if (lat !== undefined) {
+        document.getElementById("latitude").textContent =
+            Number(lat).toFixed(4);
     }
 
-
-    if (data.longitude) {
-
-        document.getElementById(
-            "longitude"
-        ).textContent =
-            Number(data.longitude)
-                .toFixed(4);
-
+    if (lon !== undefined) {
+        document.getElementById("longitude").textContent =
+            Number(lon).toFixed(4);
     }
-
+    
 
     /* ACQUISITION */
 
@@ -281,9 +269,17 @@ function updateDashboard(data) {
 
     /* VESSELS */
 
-    renderVessels(
-        data.vessels || []
-    );
+    renderVessels(data.vessels || []);
+    drawVessels(data.vessels || []);
+    /* LIVE SATELLITE IMAGE */
+
+    const overlay = document.getElementById("satellite-overlay");
+
+    if (overlay) {
+        overlay.src =
+            "http://127.0.0.1:8000/outputs/latest_overlay.png?" +
+            Date.now();
+    }
 
 }
 
@@ -294,43 +290,70 @@ function updateDashboard(data) {
 
 function drawSpill(geometry) {
 
-    if (spillLayer) {
-
-        map.removeLayer(spillLayer);
-
+    if (!geometry || !geometry.coordinates || geometry.coordinates.length === 0) {
+        return;
     }
 
+    // Remove previous spill polygon
+    if (spillLayer) {
+        map.removeLayer(spillLayer);
+    }
 
-    const coords =
-        geometry.coordinates[0]
-            .map(point => [
-                point[1],
-                point[0]
-            ]);
+    // Convert GeoJSON [lon, lat] -> Leaflet [lat, lon]
+    const coords = geometry.coordinates[0].map(([lon, lat]) => [lat, lon]);
 
+    spillLayer = L.polygon(coords, {
+        color: "#ff3b3b",
+        fillColor: "#ff3b3b",
+        fillOpacity: 0.35,
+        weight: 2
+    }).addTo(map);
 
-    spillLayer =
-        L.polygon(
-            coords,
+    // Zoom map to detected spill
+    map.fitBounds(spillLayer.getBounds(), {
+        padding: [30, 30]
+    });
+}
+function drawVessels(vessels) {
+
+    vesselMarkers.forEach(marker => map.removeLayer(marker));
+    vesselMarkers = [];
+
+    vessels.forEach(vessel => {
+
+        const marker = L.circleMarker(
+            [vessel.latitude, vessel.longitude],
             {
-                color: "#e88e8e",
-                weight: 2,
-                opacity: 0.9,
-                fillColor: "#e88e8e",
-                fillOpacity: 0.22
+                radius: 7,
+                color: "#3b82f6",
+                fillColor: "#60a5fa",
+                fillOpacity: 0.9,
+                weight: 2
             }
         ).addTo(map);
 
+        marker.bindPopup(`
+            <strong>${vessel.ship_name}</strong><br>
+            MMSI: ${vessel.mmsi}<br>
+            Risk Score: ${vessel.risk_score}<br>
+            Distance: ${vessel.distance_km} km
+        `);
 
-    map.fitBounds(
-        spillLayer.getBounds(),
-        {
-            padding: [60, 60]
-        }
-    );
-
+        vesselMarkers.push(marker);
+        L.polyline(
+            [
+                [19.0760, 72.8777],          // spill location
+                [vessel.latitude, vessel.longitude]
+            ],
+            {
+                color: "#00d4ff",
+                weight: 2,
+                dashArray: "6 6",
+                opacity: 0.8
+            }
+        ).addTo(map);
+    });
 }
-
 
 /* ================================
    VESSELS
@@ -338,66 +361,34 @@ function drawSpill(geometry) {
 
 function renderVessels(vessels) {
 
-    const container =
-        document.getElementById(
-            "vessel-list"
-        );
+    const container = document.getElementById("vessel-list");
 
-
-    document.getElementById(
-        "vessel-count"
-    ).textContent =
+    document.getElementById("vessel-count").textContent =
         `${vessels.length} TRACKS`;
 
-
-    if (!vessels.length) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-                No correlated vessels in current scene.
-            </div>
-        `;
-
+    if (vessels.length === 0) {
+        container.innerHTML =
+            `<div class="empty-state">Awaiting AIS correlation...</div>`;
         return;
     }
 
+    container.innerHTML = vessels.map((vessel, index) => `
+        <div class="vessel-row">
 
-    container.innerHTML =
-        vessels.map(
-            (vessel, index) => `
+            <div class="vessel-rank">${index + 1}</div>
 
-            <div class="vessel-row">
-
-                <div class="vessel-rank">
-                    ${String(index + 1).padStart(2, "0")}
-                </div>
-
-                <div class="vessel-main">
-
-                    <strong>
-                        ${vessel.ship_name ||
-                        "UNKNOWN VESSEL"}
-                    </strong>
-
-                    <span>
-                        MMSI ${vessel.mmsi || "—"}
-                    </span>
-
-                </div>
-
-                <div class="vessel-score">
-
-                    ${vessel.score || "—"}
-
-                </div>
-
+            <div class="vessel-main">
+                <strong>${vessel.ship_name}</strong><br>
+                MMSI ${vessel.mmsi}
             </div>
 
-        `
-        ).join("");
+            <div class="vessel-score">
+                ${vessel.risk_score}
+            </div>
 
+        </div>
+    `).join("");
 }
-
 
 /* ================================
    AUTO REFRESH
